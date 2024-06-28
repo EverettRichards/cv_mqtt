@@ -11,6 +11,7 @@ broker_IP = "192.168.251.142"
 port_Num = 1883
 
 client_name = socket.getfqdn()
+print(client_name)
 
 def encodePayload(data):
     data["source"] = client_name
@@ -33,7 +34,7 @@ def on_connect(client, userdata, flags, rc):
     # Tell the server that this client exists!
     publish(client,"new_client",{"message":"New Client :)"})
     # Publish test data to the server.
-    publish(client,"data_V2B",{"message":"Traffic Cone","confidence":90,"timestamp":time.time()})
+    #publish(client,"data_V2B",{"message":"Traffic Cone","confidence":90,"timestamp":time.time()})
 
 def processVerdict(payload):
     print(f"Verdict received. The object is: " + payload["message"])
@@ -87,8 +88,10 @@ def ComputerVision():
             publish(client,"data_V2B",{"message":t,"confidence":acc,"timestamp":time.time()})
         else:
             print(f'No traffic sign found')
-
-            publish(client,"data_V2B",{"message":"Nothing","confidence":0,"timestamp":time.time()})
+            TOPRINT = "Banana"
+            if client_name == "euclid":
+                TOPRINT = "Apple"
+            publish(client,"data_V2B",{"message":TOPRINT,"confidence":0,"timestamp":time.time()})
         
         wait(1)
 

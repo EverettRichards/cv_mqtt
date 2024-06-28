@@ -4,8 +4,11 @@ import json
 import socket
 import time
 from time import sleep as wait
-from vilib import Vilib
+from vilib import Vilib # Built-in SunFounder computer vision library
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 broker_IP = "192.168.251.142"
 port_Num = 1883
@@ -56,6 +59,7 @@ client.on_message = on_message
 # Set the will message, when the Raspberry Pi is powered off, or the network is interrupted abnormally, it will send the will message to other clients
 client.will_set('end_client',encodePayload({"message":"Client Expired :("}))
 
+client.enable_logger()
 # Create connection, the three parameters are broker address, broker port number, and keep-alive time respectively
 client.connect(broker_IP, port_Num, keepalive=60)
 
@@ -90,7 +94,7 @@ def ComputerVision():
 
             publish(client,"data_V2B",{"message":"Nothing","confidence":0,"timestamp":time.time()})
         
-        wait(0.5)
+        wait(1)
 
 
 if __name__ == "__main__":

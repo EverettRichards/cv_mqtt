@@ -7,7 +7,7 @@ from time import sleep as wait
 from vilib import Vilib
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
 
-broker_IP = "192.168.129.142"
+broker_IP = "192.168.251.142"
 port_Num = 1883
 
 client_name = socket.getfqdn()

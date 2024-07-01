@@ -72,9 +72,19 @@ def ComputerVision():
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     Vilib.traffic_detect_switch(True)
+    Vilib.image_classify_switch(True)
     wait(1)
 
+    image_name = None
+    sign_name = None
+    image_confidence = 0
+    sign_confidence = 0
+
+    iteration_counter = 0
+
     while True:
+        iteration_counter += 1
+        '''
         t = Vilib.traffic_sign_obj_parameter['t']
         if t != 'none':
             x = Vilib.traffic_sign_obj_parameter['x']
@@ -92,8 +102,38 @@ def ComputerVision():
             if client_name == "euclid":
                 TOPRINT = "Apple"
             publish(client,"data_V2B",{"message":TOPRINT,"confidence":0,"timestamp":time.time()})
+        '''
+        img_name_temp = Vilib.image_classification_obj_parameter['name']
+        img_acc_temp = Vilib.image_classification_obj_parameter['acc']
+
+        if img_acc_temp >= image_confidence:
+            image_name = img_name_temp
+            image_confidence = img_acc_temp
+
+        sign_type = Vilib.traffic_sign_obj_parameter['t']
+        sign_acc = Vilib.traffic_sign_obj_parameter['acc']
+        if sign_type != 'none' and sign_acc > sign_confidence:
+            sign_name = sign_type
+            sign_confidence = sign_acc
+        #print(f'{name} {acc:.3f}')
+        #publish(client,"data_V2B",{"label":name,"confidence":acc,"timestamp":time.time()})
+
+        # Every 10th iteration, submit the strongest decision to the edge server for consideration.
+        if (iteration_counter % 10 == 0):
+            # If a Sign was detected, choose it. Otherwise, use image classification.
+            chosen_name = sign_name if sign_confidence > 0 else image_name
+            chosen_confidence = sign_confidence if sign_confidence > 0 else image_confidence
+
+            # Send out the final decision of what the robot sees!
+            publish(client,"data_V2B",{"label":chosen_name,"confidence":chosen_confidence,"timestamp":time.time()})
+
+            # Reset the parameters
+            image_name = None
+            sign_name = None
+            image_confidence = 0
+            sign_confidence = 0
         
-        wait(1)
+        wait(0.1)
 
 
 if __name__ == "__main__":

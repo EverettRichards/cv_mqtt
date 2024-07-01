@@ -11,13 +11,15 @@ def main():
 
     # You can use the following two functions to load the model and the corresponding label
     # Vilib.object_detect_set_model(path='/opt/vilib/detect.tflite')
-    Vilib.object_detect_set_model(path='/home/udel/EdgeCode/tf_models/ssd-v1.tflite')
+    ###Vilib.object_detect_set_model(path='/home/udel/cv_mqtt/tf_models/ssd-v1.tflite')
     #Vilib.object_detect_set_labels(path='/opt/vilib/coco_labels.txt')
-    Vilib.object_detect_set_labels(path='/home/udel/EdgeCode/tf_models/ssd-labels.txt')
+    ###Vilib.object_detect_set_labels(path='/home/udel/cv_mqtt/tf_models/ssd-labels.txt')
 
     Vilib.object_detect_switch(True)
 
     while True: # Keep the main program running
+        #print(Vilib.detect_obj_parameter)
+        print(Vilib.detect_obj_parameter)
         sleep(0.5)
 
 if __name__ == "__main__":

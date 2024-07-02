@@ -7,7 +7,7 @@ from time import sleep as wait
 from vilib import Vilib # Built-in SunFounder computer vision library
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
 
-broker_IP = "192.168.251.142"
+broker_IP = "192.168.147.42"
 port_Num = 1883
 
 client_name = socket.getfqdn()

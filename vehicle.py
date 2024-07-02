@@ -114,7 +114,7 @@ def ComputerVision():
         sign_acc = Vilib.traffic_sign_obj_parameter['acc']
         if sign_type != 'none' and sign_acc > sign_confidence:
             sign_name = sign_type
-            sign_confidence = sign_acc
+            sign_confidence = sign_acc/100
         #print(f'{name} {acc:.3f}')
         #publish(client,"data_V2B",{"label":name,"confidence":acc,"timestamp":time.time()})
 

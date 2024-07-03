@@ -19,7 +19,7 @@ def main():
 
     while True: # Keep the main program running
         #print(Vilib.detect_obj_parameter)
-        print(Vilib.detect_obj_parameter)
+        print(Vilib.object_detection_list_parameter)
         sleep(0.5)
 
 if __name__ == "__main__":

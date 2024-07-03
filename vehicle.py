@@ -73,7 +73,7 @@ def ComputerVision():
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     Vilib.traffic_detect_switch(True)
-    Vilib.image_classify_switch(True)
+    Vilib.object_detect_switch(True)
     wait(1)
 
     image_name = None
@@ -85,25 +85,6 @@ def ComputerVision():
 
     while True:
         iteration_counter += 1
-        '''
-        t = Vilib.traffic_sign_obj_parameter['t']
-        if t != 'none':
-            x = Vilib.traffic_sign_obj_parameter['x']
-            y = Vilib.traffic_sign_obj_parameter['y']
-            w = Vilib.traffic_sign_obj_parameter['w']
-            h = Vilib.traffic_sign_obj_parameter['h']
-            acc = Vilib.traffic_sign_obj_parameter['acc']
-
-            print(f"{t} ({acc}%), coordinate=({x}, {y}), size={w}*{h}")
-        
-            publish(client,"data_V2B",{"message":t,"confidence":acc,"timestamp":time.time()})
-        else:
-            print(f'No traffic sign found')
-            TOPRINT = "Banana"
-            if client_name == "euclid":
-                TOPRINT = "Apple"
-            publish(client,"data_V2B",{"message":TOPRINT,"confidence":0,"timestamp":time.time()})
-        '''
         img_name_temp = Vilib.image_classification_obj_parameter['name']
         img_acc_temp = Vilib.image_classification_obj_parameter['acc']
 

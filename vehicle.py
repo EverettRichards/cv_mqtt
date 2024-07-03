@@ -2,14 +2,15 @@
 # TEST CHANGE
 import paho.mqtt.client as mqtt
 import json
+from network_config import broker_IP, port_num
 import socket
 import time
 from time import sleep as wait
 from vilib import Vilib # Built-in SunFounder computer vision library
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
+import numpy as np
 
-broker_IP = "192.168.147.42"
-port_Num = 1883
+config = None
 
 client_name = socket.getfqdn()
 print(client_name)
@@ -32,6 +33,7 @@ def on_connect(client, userdata, flags, rc):
     # Subscribe to view incoming verdicts
     client.subscribe("verdict")
     client.subscribe("msg_B2V")
+    client.subscribe("config")
     # Tell the server that this client exists!
     publish(client,"new_client",{"message":"New Client :)"})
     # Publish test data to the server.
@@ -50,6 +52,11 @@ def on_message(client, userdata, msg):
     if msg.topic == "verdict":
         # Receive a verdict from the server. Utilize it.
         processVerdict(payload)
+    elif msg.topic == "config":
+        global config
+        if config != None: return
+        config = decodePayload(payload)
+        print(f"Config received: {config}")
 
 client = mqtt.Client()
 client.on_connect = on_connect
@@ -59,68 +66,90 @@ client.on_message = on_message
 client.will_set('end_client',encodePayload({"message":"Client Expired :("}))
 
 # Create connection, the three parameters are broker address, broker port number, and keep-alive time respectively
-client.connect(broker_IP, port_Num, keepalive=60)
+client.connect(broker_IP, port_num, keepalive=60)
 
 # Set the network loop blocking, it will not actively end the program before calling disconnect() or the program crash
 def network_loop():
     client.loop_forever()
 
+def find_closest_object(dict_of_numbers, number):
+    return min(dict_of_numbers.keys(), key=lambda x:abs((dict_of_numbers[x])-number))
+
 
 # VILIB CODE...
-
 def ComputerVision():
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
-    Vilib.traffic_detect_switch(True)
     Vilib.object_detect_switch(True)
     wait(1)
 
-    image_name = None
-    sign_name = None
-    image_confidence = 0
-    sign_confidence = 0
+    # Import from the collective config file
+    object_locations = config["object_locations"]
+    vehicle_locations = config["vehicle_locations"]
 
-    iteration_counter = 0
+    # The current car's physical location in 2D space
+    my_loc = object_locations[client_name]
+
+    angles_to_each_object = {} # Strictly in Degrees
+
+    # Initialize the angles to each object
+    for obj in object_locations.keys():
+        obj_loc = object_locations[obj]
+        theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"])
+        angles_to_each_object[obj] = theta * 180 / np.pi # TEST THETA FOR REASONABLE OUTPUTS
+
+    horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
+    #vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]
+    screen_center_x = config["image_width"] / 2
+    #screen_center_y = config["image_height"] / 2
 
     while True:
-        iteration_counter += 1
-        img_name_temp = Vilib.image_classification_obj_parameter['name']
-        img_acc_temp = Vilib.image_classification_obj_parameter['acc']
+        object_list = {}
+        for obj in object_locations.keys():
+            object_list[obj] = None
+        detected_objects = Vilib.object_detection_list_parameter.copy()
 
-        if img_acc_temp >= image_confidence:
-            image_name = img_name_temp
-            image_confidence = img_acc_temp
+        # Look through list of objects
+        for obj in detected_objects:
+            # ATTRIBUTES: class_name, score, bounding_box[] (4 32-bit floats)
 
-        sign_type = Vilib.traffic_sign_obj_parameter['t']
-        sign_acc = Vilib.traffic_sign_obj_parameter['acc']
-        if sign_type != 'none' and sign_acc > sign_confidence:
-            sign_name = sign_type
-            sign_confidence = sign_acc/100
-        #print(f'{name} {acc:.3f}')
-        #publish(client,"data_V2B",{"label":name,"confidence":acc,"timestamp":time.time()})
+            # Calculate on-screen angle between object and robot, using label
 
-        # Every 10th iteration, submit the strongest decision to the edge server for consideration.
-        if (iteration_counter % 10 == 0):
-            # If a Sign was detected, choose it. Otherwise, use image classification.
-            chosen_name = sign_name if sign_confidence > 0 else image_name
-            chosen_confidence = sign_confidence if sign_confidence > 0 else image_confidence
+            bounds = obj["bounding_box"]
+            x1,y1,x2,y2 = bounds # IDK what order these are actually presented in. CALIBRATE!
+    
+            x_center = (x1+x2)/2
+            #y_center = (y1+y2)/2
 
-            # Send out the final decision of what the robot sees!
-            publish(client,"data_V2B",{"label":chosen_name,"confidence":chosen_confidence,"timestamp":time.time()})
+            # Find out how many degrees off-center the detected object is
+            delta_x = x_center - screen_center_x
+            delta_theta = delta_x * horizontal_angle_per_pixel
 
-            # Reset the parameters
-            image_name = None
-            sign_name = None
-            image_confidence = 0
-            sign_confidence = 0
+            # Determine which of the known objects this object is closest to, in terms of angle
+            closest_object = find_closest_object(angles_to_each_object,delta_theta)
+            closest_angle = angles_to_each_object[closest_object]
+            angle_difference = abs(delta_theta - closest_angle)
+
+            # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
+            if angle_difference < config["angle_threshold"]:
+                if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
+                    object_list[closest_object] = [obj["class_name"],obj["score"]]
+                    print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
+
+        # Send out the final decision of what the robot sees!
+        publish(client,"data_V2B",object_list)
         
-        wait(0.1)
+        wait(config["submission_interval"])
 
 
 if __name__ == "__main__":
     try:
         Process(target=network_loop).start()
+        wait(0.5)
+        while config == None:
+            publish(client,"request_config",{"message":"Please send me the config!"})
+            wait(0.5)
         ComputerVision()
     except KeyboardInterrupt:
         pass

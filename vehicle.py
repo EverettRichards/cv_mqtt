@@ -75,6 +75,10 @@ def network_loop():
 def find_closest_object(dict_of_numbers, number):
     return min(dict_of_numbers.keys(), key=lambda x:abs((dict_of_numbers[x])-number))
 
+def get_distance(obj,car):
+    obj_loc = config["object_locations"][obj]
+    car_loc = config["vehicle_locations"][car]
+    return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2)
 
 # VILIB CODE...
 def ComputerVision():
@@ -115,12 +119,10 @@ def ComputerVision():
             # ATTRIBUTES: class_name, score, bounding_box[] (4 32-bit floats)
 
             # Calculate on-screen angle between object and robot, using label
-
             bounds = obj["bounding_box"]
             x1,y1,x2,y2 = bounds # IDK what order these are actually presented in. CALIBRATE!
     
             x_center = (x1+x2)/2
-            #y_center = (y1+y2)/2
 
             # Find out how many degrees off-center the detected object is
             delta_x = x_center - screen_center_x
@@ -134,14 +136,15 @@ def ComputerVision():
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:
                 if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
-                    object_list[closest_object] = [obj["class_name"],obj["score"]]
+                    object_list[closest_object] = [obj["class_name"],obj["score"],get_distance(closest_object,client_name)]
                     print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 
         # Send out the final decision of what the robot sees!
-        publish(client,"data_V2B",object_list)
+        publish(client,"data_V2B",{"object_list":object_list})
         
         wait(config["submission_interval"])
 
+# object_list looks like: {"object_name":[class_name,confidence,distance], ... (n=#real_objects)}
 
 if __name__ == "__main__":
     try:

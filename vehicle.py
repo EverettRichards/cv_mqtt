@@ -127,7 +127,7 @@ def ComputerVision():
     for obj in object_locations.keys():
         obj_loc = object_locations[obj]
         theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
-        angles_to_each_object[obj] = theta * 180 / np.pi - my_loc["theta"] # TEST THETA FOR REASONABLE OUTPUTS
+        angles_to_each_object[obj] = my_loc["theta"] - theta * 180 / np.pi
 
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
     #vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]

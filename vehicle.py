@@ -47,7 +47,7 @@ def on_connect(client, userdata, flags, rc):
     #publish(client,"data_V2B",{"message":"Traffic Cone","confidence":90,"timestamp":time.time()})
 
 def processVerdict(payload):
-    print(f"Verdict received. The object is: " + payload["message"])
+    print(f"Verdict received. The objects are: " + str(payload["message"]))
 
 def writeConfig(payload):
     global config

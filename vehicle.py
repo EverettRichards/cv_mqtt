@@ -55,7 +55,7 @@ def on_message(client, userdata, msg):
     elif msg.topic == "config":
         global config
         if config != None: return
-        config = decodePayload(payload)
+        config = payload
         print(f"Config received: {config}")
 
 client = mqtt.Client()

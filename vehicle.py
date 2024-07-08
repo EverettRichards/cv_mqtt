@@ -51,6 +51,7 @@ def writeConfig(payload):
     print(f"Config received: {config}")
 
 def waitForConfig():
+    global config
     while config == None:
         try:
             conf_file = open("config.json","r")
@@ -97,6 +98,7 @@ def get_distance(obj,car):
 # VILIB CODE...
 def ComputerVision():
     waitForConfig()
+    global config
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)

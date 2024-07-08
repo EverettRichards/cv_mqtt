@@ -42,6 +42,23 @@ def on_connect(client, userdata, flags, rc):
 def processVerdict(payload):
     print(f"Verdict received. The object is: " + payload["message"])
 
+def writeConfig(payload):
+    global config
+    if config != None: return
+    config = payload
+    conf_file = open("config.json","w")
+    conf_file.write(json.dumps(config))
+    print(f"Config received: {config}")
+
+def waitForConfig(payload):
+    while config == None:
+        try:
+            conf_file = open("config.json","r")
+            config = json.loads(conf_file.read())
+        except:
+            print("Config not received yet. Waiting...")
+        wait(0.1)
+
 # The callback function, it will be triggered when receiving messages
 def on_message(client, userdata, msg):
     # Turn from byte array to string text
@@ -53,10 +70,7 @@ def on_message(client, userdata, msg):
         # Receive a verdict from the server. Utilize it.
         processVerdict(payload)
     elif msg.topic == "config":
-        global config
-        if config != None: return
-        config = payload
-        print(f"Config received: {config}")
+        writeConfig(payload)
 
 client = mqtt.Client()
 client.on_connect = on_connect
@@ -82,7 +96,7 @@ def get_distance(obj,car):
 
 # VILIB CODE...
 def ComputerVision():
-    print(config)
+    waitForConfig()
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
@@ -157,7 +171,7 @@ if __name__ == "__main__":
         ComputerVision()
     except KeyboardInterrupt:
         pass
-    #except Exception as e:
-        #print(f"\033[31mERROR: {e}\033[m")
+    except Exception as e:
+        print(f"\033[31mERROR: {e}\033[m")
     finally:
         Vilib.camera_close()

@@ -165,8 +165,8 @@ def ComputerVision():
                     object_list[closest_object] = [obj["class_name"],obj["score"],get_distance(closest_object,client_name)]
                     print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 
-            print(obj["class_name"].lower())
             if obj["class_name"].lower() == "stop sign":
+                print("-"*40)
                 print(f"Stop sign detected with confidence {obj['score']}")
                 print("Bounding Box: " + str(obj["bounding_box"]))
                 print("Delta theta: " + str(delta_theta))
@@ -174,6 +174,9 @@ def ComputerVision():
                 print("Closest object: " + closest_object)
                 print("Closest angle: " + str(closest_angle))
                 print("Angle difference: " + str(angle_difference))
+                print("X Center: " + str(x_center))
+                print("Delta X: " + str(delta_x))
+                print("-"*40)
 
         # Send out the final decision of what the robot sees!
         publish(client,"data_V2B",{"object_list":object_list})

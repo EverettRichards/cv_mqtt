@@ -150,9 +150,9 @@ if __name__ == "__main__":
     try:
         Process(target=network_loop).start()
         wait(0.5)
-        while config == None:
-            publish(client,"request_config",{"message":"Please send me the config!"})
-            wait(0.5)
+        #while config == None:
+            #publish(client,"request_config",{"message":"Please send me the config!"})
+            #wait(0.5)
         ComputerVision()
     except KeyboardInterrupt:
         pass

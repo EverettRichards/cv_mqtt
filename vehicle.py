@@ -101,7 +101,7 @@ def find_closest_object(dict_of_numbers, number):
 def get_distance(obj,car):
     obj_loc = config["object_locations"][obj]
     car_loc = config["vehicle_locations"][car]
-    return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2).item()
+    return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2)
 
 # VILIB CODE...
 def ComputerVision():
@@ -164,7 +164,7 @@ def ComputerVision():
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:
                 if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
-                    object_list[closest_object] = [obj["class_name"],obj["score"].astype(float),get_distance(closest_object,client_name).astype(float)]
+                    object_list[closest_object] = [obj["class_name"],float(obj["score"]),float(get_distance(closest_object,client_name))]
                     print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 
             if obj["class_name"].lower() == "stop sign":

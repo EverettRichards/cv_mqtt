@@ -127,7 +127,7 @@ def ComputerVision():
     for obj in object_locations.keys():
         obj_loc = object_locations[obj]
         theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
-        angles_to_each_object[obj] = float(theta * 180 / np.pi - my_loc["theta"]) # TEST THETA FOR REASONABLE OUTPUTS
+        angles_to_each_object[obj] = theta * 180 / np.pi - my_loc["theta"] # TEST THETA FOR REASONABLE OUTPUTS
 
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
     #vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]
@@ -164,7 +164,7 @@ def ComputerVision():
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:
                 if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
-                    object_list[closest_object] = [obj["class_name"],obj["score"],get_distance(closest_object,client_name).item()]
+                    object_list[closest_object] = [obj["class_name"],obj["score"].astype(float),get_distance(closest_object,client_name).astype(float)]
                     print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 
             if obj["class_name"].lower() == "stop sign":

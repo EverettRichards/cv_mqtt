@@ -101,7 +101,7 @@ def find_closest_object(dict_of_numbers, number):
 def get_distance(obj,car):
     obj_loc = config["object_locations"][obj]
     car_loc = config["vehicle_locations"][car]
-    return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2)
+    return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2).item()
 
 # VILIB CODE...
 def ComputerVision():
@@ -126,8 +126,8 @@ def ComputerVision():
     # Initialize the angles to each object
     for obj in object_locations.keys():
         obj_loc = object_locations[obj]
-        theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"])
-        angles_to_each_object[obj] = theta * 180 / np.pi - my_loc["theta"] # TEST THETA FOR REASONABLE OUTPUTS
+        theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
+        angles_to_each_object[obj] = float(theta * 180 / np.pi - my_loc["theta"]) # TEST THETA FOR REASONABLE OUTPUTS
 
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
     #vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]

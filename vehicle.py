@@ -82,6 +82,7 @@ def get_distance(obj,car):
 
 # VILIB CODE...
 def ComputerVision():
+    print(config)
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)

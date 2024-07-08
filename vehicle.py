@@ -164,7 +164,7 @@ def ComputerVision():
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:
                 if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
-                    if obj and obj["class_name"]:
+                    if obj and "class_name" in obj.keys():
                         object_list[closest_object] = [obj["class_name"],float(obj["score"]),float(get_distance(closest_object,client_name))]
                         print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 

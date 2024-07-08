@@ -50,7 +50,7 @@ def writeConfig(payload):
     conf_file.write(json.dumps(config))
     print(f"Config received: {config}")
 
-def waitForConfig(payload):
+def waitForConfig():
     while config == None:
         try:
             conf_file = open("config.json","r")

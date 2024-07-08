@@ -9,11 +9,18 @@ from time import sleep as wait
 from vilib import Vilib # Built-in SunFounder computer vision library
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
 import numpy as np
+import os
 
 config = None
 
 client_name = socket.getfqdn()
 print(client_name)
+
+def deleteLocalConfig():
+    try:
+        os.remove("config.json")
+    except:
+        pass
 
 def encodePayload(data):
     data["source"] = client_name
@@ -167,6 +174,7 @@ def ComputerVision():
 
 if __name__ == "__main__":
     try:
+        deleteLocalConfig()
         Process(target=network_loop).start()
         wait(0.5)
         #while config == None:

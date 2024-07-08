@@ -102,6 +102,7 @@ def ComputerVision():
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
+    wait(1)
     Vilib.object_detect_switch(True)
     wait(1)
 

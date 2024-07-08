@@ -54,6 +54,7 @@ def waitForConfig():
     global config
     while config == None:
         try:
+            publish(client,"request_config",{"message":"Please send me the config!"})
             conf_file = open("config.json","r")
             config = json.loads(conf_file.read())
         except:

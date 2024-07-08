@@ -165,6 +165,7 @@ def ComputerVision():
                     object_list[closest_object] = [obj["class_name"],obj["score"],get_distance(closest_object,client_name)]
                     print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 
+            print(obj["class_name"].lower())
             if obj["class_name"].lower() == "stop sign":
                 print(f"Stop sign detected with confidence {obj['score']}")
                 print("Bounding Box: " + str(obj["bounding_box"]))

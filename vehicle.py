@@ -146,7 +146,9 @@ def ComputerVision():
 
             # Calculate on-screen angle between object and robot, using label
             bounds = obj["bounding_box"]
-            x1,y1,x2,y2 = bounds # IDK what order these are actually presented in. CALIBRATE!
+            y1,x1,y2,x2 = bounds # IDK what order these are actually presented in. CALIBRATE!
+            y1,y2 = y1*config["image_height"],y2*config["image_height"] # Adjust to pixel size
+            x1,x2 = x1*config["image_width"],x2*config["image_width"] # Adjust to pixel size
     
             x_center = (x1+x2)/2
 

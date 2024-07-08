@@ -110,7 +110,7 @@ def ComputerVision():
     vehicle_locations = config["vehicle_locations"]
 
     # The current car's physical location in 2D space
-    my_loc = object_locations[client_name]
+    my_loc = vehicle_locations[client_name]
 
     angles_to_each_object = {} # Strictly in Degrees
 

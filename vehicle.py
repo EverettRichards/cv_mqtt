@@ -10,11 +10,11 @@ from vilib import Vilib # Built-in SunFounder computer vision library
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
 import numpy as np
 import os
+from colors import *
 
 config = None
 
 client_name = socket.getfqdn()
-print(client_name)
 
 def deleteLocalConfig():
     try:
@@ -33,10 +33,10 @@ def decodePayload(string_data):
 
 def publish(client,topic,message):
     client.publish(topic,payload=encodePayload(message),qos=0,retain=False)
-    print(f"Emitted message: {message}")
+    prYellow(f"Emitted message: {message}")
 
 def on_connect(client, userdata, flags, rc):
-    print(f"Connected with result code {rc}")
+    prCyan(f"Connected with result code {rc}")
     # Subscribe to view incoming verdicts
     client.subscribe("verdict")
     client.subscribe("msg_B2V")
@@ -47,7 +47,7 @@ def on_connect(client, userdata, flags, rc):
     #publish(client,"data_V2B",{"message":"Traffic Cone","confidence":90,"timestamp":time.time()})
 
 def processVerdict(payload):
-    print(f"Verdict received. The objects are: " + str(payload["message"]))
+    prGreen(f"Verdict received. The objects are: " + str(payload["message"]))
 
 def writeConfig(payload):
     global config
@@ -55,7 +55,7 @@ def writeConfig(payload):
     config = payload
     conf_file = open("config.json","w")
     conf_file.write(json.dumps(config))
-    print(f"Config received: {config}")
+    prCyan(f"Config received: {config}")
 
 def waitForConfig():
     global config
@@ -65,7 +65,7 @@ def waitForConfig():
             conf_file = open("config.json","r")
             config = json.loads(conf_file.read())
         except:
-            print("Config not received yet. Waiting...")
+            prRed("Config not received yet. Waiting...")
         wait(0.1)
 
 # The callback function, it will be triggered when receiving messages
@@ -166,7 +166,8 @@ def ComputerVision():
                 if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
                     if obj and "class_name" in obj.keys():
                         object_list[closest_object] = [obj["class_name"],float(obj["score"]),float(get_distance(closest_object,client_name))]
-                        print(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
+                        if config["show_verbose"]:
+                            prLightPurple(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
 
         # Send out the final decision of what the robot sees!
         publish(client,"data_V2B",{"object_list":object_list})

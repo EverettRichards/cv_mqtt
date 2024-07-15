@@ -1,2 +1,2 @@
-broker_IP = "10.93.249.225"
+broker_IP = "192.168.4.1"
 port_num = 1883

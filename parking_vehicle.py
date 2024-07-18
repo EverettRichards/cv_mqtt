@@ -103,15 +103,42 @@ def get_distance(obj,car):
     car_loc = config["vehicle_locations"][car]
     return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2)
 
-# VILIB CODE...
-def ComputerVision():
-    waitForConfig()
-    global config
+horizontal_angle_per_pixel = None
+screen_center_x = None
+
+def get_angle_to_object(obj,car):
+    global horizontal_angle_per_pixel, screen_center_x
+
+    # Calculate on-screen angle between object and robot, using label
+    bounds = obj["bounding_box"]
+    y1,x1,y2,x2 = bounds # IDK what order these are actually presented in. CALIBRATE!
+    y1,y2 = y1*config["image_height"],y2*config["image_height"] # Adjust to pixel size
+    x1,x2 = x1*config["image_width"],x2*config["image_width"] # Adjust to pixel size
+    
+    x_center = (x1+x2)/2
+
+    # Find out how many degrees off-center the detected object is
+    delta_x = x_center - screen_center_x
+    delta_theta = delta_x * horizontal_angle_per_pixel
+
+    return delta_theta
+
+def StartCamera():
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     wait(1)
     Vilib.object_detect_switch(True)
+    Vilib.qrcode_detect_switch(True)
+
+# VILIB CODE...
+def ComputerVision():
+
+    waitForConfig()
+    global config
+
+    StartCamera()
+
     wait(1)
 
     # Import from the collective config file
@@ -135,6 +162,7 @@ def ComputerVision():
     #screen_center_y = config["image_height"] / 2
 
     while True:
+        qr_text = Vilib.detect_obj_parameter['qr_data']
         object_list = {}
         for obj in object_locations.keys():
             object_list[obj] = None
@@ -144,17 +172,7 @@ def ComputerVision():
         for obj in detected_objects:
             # ATTRIBUTES: class_name, score, bounding_box[] (4 32-bit floats)
 
-            # Calculate on-screen angle between object and robot, using label
-            bounds = obj["bounding_box"]
-            y1,x1,y2,x2 = bounds # IDK what order these are actually presented in. CALIBRATE!
-            y1,y2 = y1*config["image_height"],y2*config["image_height"] # Adjust to pixel size
-            x1,x2 = x1*config["image_width"],x2*config["image_width"] # Adjust to pixel size
-    
-            x_center = (x1+x2)/2
-
-            # Find out how many degrees off-center the detected object is
-            delta_x = x_center - screen_center_x
-            delta_theta = delta_x * horizontal_angle_per_pixel
+            delta_theta = get_angle_to_object(obj,client_name)
 
             # Determine which of the known objects this object is closest to, in terms of angle
             closest_object = find_closest_object(angles_to_each_object,delta_theta)

@@ -33,7 +33,7 @@ def decodePayload(string_data):
 
 def publish(client,topic,message):
     client.publish(topic,payload=encodePayload(message),qos=0,retain=False)
-    prYellow(f"Emitted message (t = ...{time.time()%10000:.3f}s)")
+    prCyan(f"Emitted message (t = ...{time.time()%10000:.3f}s)")
 
 def on_connect(client, userdata, flags, rc):
     prCyan(f"Connected with result code {rc}")
@@ -47,7 +47,7 @@ def on_connect(client, userdata, flags, rc):
     #publish(client,"data_V2B",{"message":"Traffic Cone","confidence":90,"timestamp":time.time()})
 
 def processVerdict(payload):
-    prGreen(f"Verdict received. The objects are: " + str(payload["message"]))
+    prYellow(f"Verdict received. The objects are: " + str(payload["message"]))
 
 def writeConfig(payload):
     global config
@@ -66,7 +66,7 @@ def waitForConfig():
             config = json.loads(conf_file.read())
         except:
             prRed("Config not received yet. Waiting...")
-        wait(0.1)
+        wait(0.5)
 
 # The callback function, it will be triggered when receiving messages
 def on_message(client, userdata, msg):
@@ -170,6 +170,7 @@ def ComputerVision():
     global screen_center_x
 
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
+    vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]
     screen_center_x = config["image_width"] / 2
 
     qr_code_size_inches = 1 + 15/16
@@ -181,9 +182,12 @@ def ComputerVision():
 
         for qr in qr_list:
             angle_from_center = get_angle_to_qr(qr)
+            # Figure out how many degrees the QR code spans
             angular_width = qr['w'] * horizontal_angle_per_pixel
+            angular_height = qr['h'] * vertical_angle_per_pixel
+            angular_avg_size = np.sqrt(angular_width*angular_height)
             # Calculate the object's distance from camera using basic trig + knowledge of fixed QR code size
-            distance_from_camera = qr_code_size_inches / (2 * np.tan(rad(angular_width)/2))
+            distance_from_camera = qr_code_size_inches / (2 * np.tan(rad(angular_avg_size)/2))
             qr['distance'] = distance_from_camera
 
             # The objective orientation of the detected QR code, relative to central axis
@@ -196,11 +200,13 @@ def ComputerVision():
         
         prCyan("-"*40)
         for i,qr in enumerate(qr_list):
-            output = f"Parking Spot {i} is: {qr['text']}. GLOBAL POSITION: ({qr['position']['x']:.2f},{qr['position']['y']:.2f}). Dist={qr['distance']:.2f}in."
+            main_word = None
             if qr['text'] == "EMPTY":
-                prLightPurple(output)
+                main_word = getRed(qr['text']) + "  "
             else:
-                prGreen(output)
+                main_word = getGreen(qr['text'])
+            output = f"Parking Spot {i} is: {main_word} GLOBAL POSITION: ({qr['position']['x']:.2f},{qr['position']['y']:.2f}). Dist={qr['distance']:.2f}in."
+            print(output)
         prCyan("-"*40)
 
         # Send out the final decision of what the robot sees!

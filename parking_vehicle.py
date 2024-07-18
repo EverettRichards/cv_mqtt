@@ -33,7 +33,7 @@ def decodePayload(string_data):
 
 def publish(client,topic,message):
     client.publish(topic,payload=encodePayload(message),qos=0,retain=False)
-    prYellow(f"Emitted message: {message}")
+    prYellow(f"Emitted message (t = ...{time.time()%10000:.3f}s)")
 
 def on_connect(client, userdata, flags, rc):
     prCyan(f"Connected with result code {rc}")
@@ -55,7 +55,7 @@ def writeConfig(payload):
     config = payload
     conf_file = open("config.json","w")
     conf_file.write(json.dumps(config))
-    prCyan(f"Config received: {config}")
+    prCyan(f"Configuration data received!")
 
 def waitForConfig():
     global config
@@ -106,90 +106,105 @@ def get_distance(obj,car):
 horizontal_angle_per_pixel = None
 screen_center_x = None
 
-def get_angle_to_object(obj,car):
+def get_angular_width(x1,x2): # Takes value in PIXELS
     global horizontal_angle_per_pixel, screen_center_x
+    delta_x = x2 - x1
+    delta_theta = delta_x * horizontal_angle_per_pixel
+    return delta_theta
 
-    # Calculate on-screen angle between object and robot, using label
-    bounds = obj["bounding_box"]
-    y1,x1,y2,x2 = bounds # IDK what order these are actually presented in. CALIBRATE!
-    y1,y2 = y1*config["image_height"],y2*config["image_height"] # Adjust to pixel size
-    x1,x2 = x1*config["image_width"],x2*config["image_width"] # Adjust to pixel size
-    
+def get_angle_of_detected_thing(y1,x1,y2,x2):
+    global horizontal_angle_per_pixel, screen_center_x
+    if x2-x1<1: # Only scale if not scaled already.
+        y1,y2 = y1*config["image_height"],y2*config["image_height"] # Adjust to pixel size
+        x1,x2 = x1*config["image_width"],x2*config["image_width"] # Adjust to pixel size
+    # Find the center point (px) of the object
     x_center = (x1+x2)/2
-
     # Find out how many degrees off-center the detected object is
     delta_x = x_center - screen_center_x
     delta_theta = delta_x * horizontal_angle_per_pixel
-
     return delta_theta
+
+def get_angle_to_object(obj):
+    # Calculate on-screen angle between object and robot, using label
+    bounds = obj["bounding_box"]
+    y1,x1,y2,x2 = bounds # IDK what order these are actually presented in. CALIBRATE!
+    return get_angle_of_detected_thing(y1,x1,y2,x2)
+
+def get_angle_to_qr(qr):
+    return get_angle_of_detected_thing(qr["y"],qr["x"],qr["y"]+qr["h"],qr["x"]+qr["w"])
+
+def rad(deg):
+    return deg * np.pi / 180
 
 def StartCamera():
     Vilib.camera_start(vflip=False, hflip=False)
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
-    wait(1)
-    Vilib.object_detect_switch(True)
-    Vilib.qrcode_detect_switch(True)
+    #wait(1)
+    Vilib.object_detect_switch(False) # DO NOT enable object detection
+    Vilib.qrcode_detect_switch(True) # Enable QR detection
 
 # VILIB CODE...
 def ComputerVision():
-
     waitForConfig()
     global config
-
     StartCamera()
-
     wait(1)
 
     # Import from the collective config file
-    object_locations = config["object_locations"]
     vehicle_locations = config["vehicle_locations"]
+    default_location = vehicle_locations[client_name]
 
     # The current car's physical location in 2D space
-    my_loc = vehicle_locations[client_name]
+    initial_vehicle_location = {
+        'x': default_location["x"],
+        'y': default_location["y"],
+    }
+    current_vehicle_location = initial_vehicle_location
 
-    angles_to_each_object = {} # Strictly in Degrees
+    initial_vehicle_orientation = vehicle_locations[client_name]["theta"]
+    current_vehicle_orientation = initial_vehicle_orientation
 
-    # Initialize the angles to each object
-    for obj in object_locations.keys():
-        obj_loc = object_locations[obj]
-        theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
-        angles_to_each_object[obj] = my_loc["theta"] - theta * 180 / np.pi
+    # Calculate some basic constants based on the configuration
+    global horizontal_angle_per_pixel
+    global screen_center_x
 
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
-    #vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]
     screen_center_x = config["image_width"] / 2
-    #screen_center_y = config["image_height"] / 2
 
+    qr_code_size_inches = 1 + 15/16
+
+    # Continue forever...
     while True:
-        qr_text = Vilib.detect_obj_parameter['qr_data']
-        object_list = {}
-        for obj in object_locations.keys():
-            object_list[obj] = None
-        detected_objects = Vilib.object_detection_list_parameter.copy()
+        # Sort by order left-to-right
+        qr_list = sorted(Vilib.detect_obj_parameter['qr_list'],key=lambda qr: qr['x'])
 
-        # Look through list of objects
-        for obj in detected_objects:
-            # ATTRIBUTES: class_name, score, bounding_box[] (4 32-bit floats)
+        for qr in qr_list:
+            angle_from_center = get_angle_to_qr(qr)
+            angular_width = qr['w'] * horizontal_angle_per_pixel
+            # Calculate the object's distance from camera using basic trig + knowledge of fixed QR code size
+            distance_from_camera = qr_code_size_inches / (2 * np.tan(rad(angular_width)/2))
+            qr['distance'] = distance_from_camera
 
-            delta_theta = get_angle_to_object(obj,client_name)
+            # The objective orientation of the detected QR code, relative to central axis
+            focus_orientation = current_vehicle_orientation - angle_from_center
 
-            # Determine which of the known objects this object is closest to, in terms of angle
-            closest_object = find_closest_object(angles_to_each_object,delta_theta)
-            closest_angle = angles_to_each_object[closest_object]
-            angle_difference = abs(delta_theta - closest_angle)
-
-            # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
-            if angle_difference < config["angle_threshold"]:
-                if object_list[closest_object] == None or object_list[closest_object][1] < obj["score"]:
-                    if obj and "class_name" in obj.keys():
-                        object_list[closest_object] = [obj["class_name"],float(obj["score"]),float(get_distance(closest_object,client_name))]
-                        if config["show_verbose"]:
-                            prLightPurple(f"Object {closest_object} detected: {obj['class_name']} with confidence {obj['score']}")
+            qr['position'] = {
+                'x':current_vehicle_location['x'] + distance_from_camera * np.cos(rad(focus_orientation)),
+                'y':current_vehicle_location['y'] + distance_from_camera * np.sin(rad(focus_orientation)),
+            }
+        
+        prCyan("-"*40)
+        for i,qr in enumerate(qr_list):
+            output = f"Parking Spot {i} is: {qr['text']}. GLOBAL POSITION: ({qr['position']['x']:.2f},{qr['position']['y']:.2f}). Dist={qr['distance']:.2f}in."
+            if qr['text'] == "EMPTY":
+                prLightPurple(output)
+            else:
+                prGreen(output)
+        prCyan("-"*40)
 
         # Send out the final decision of what the robot sees!
-        publish(client,"data_V2B",{"object_list":object_list})
-        
+        publish(client,"data_V2B",{"object_list":qr_list})
         wait(config["submission_interval"])
 
 # object_list looks like: {"object_name":[class_name,confidence,distance], ... (n=#real_objects)}

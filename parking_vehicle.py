@@ -180,7 +180,8 @@ def ComputerVision():
         # Sort by order left-to-right
         qr_list = sorted(Vilib.detect_obj_parameter['qr_list'],key=lambda qr: qr['x'])
 
-        for qr in qr_list:
+        for i,qr in enumerate(qr_list):
+            new_qr = {'text':qr['text']}
             angle_from_center = get_angle_to_qr(qr)
             # Figure out how many degrees the QR code spans
             angular_width = qr['w'] * horizontal_angle_per_pixel
@@ -188,15 +189,15 @@ def ComputerVision():
             angular_avg_size = np.sqrt(angular_width*angular_height)
             # Calculate the object's distance from camera using basic trig + knowledge of fixed QR code size
             distance_from_camera = qr_code_size_inches / (2 * np.tan(rad(angular_avg_size)/2))
-            qr['distance'] = distance_from_camera
-
+            new_qr['distance'] = distance_from_camera
             # The objective orientation of the detected QR code, relative to central axis
             focus_orientation = current_vehicle_orientation - angle_from_center
 
-            qr['position'] = {
+            new_qr['position'] = {
                 'x':current_vehicle_location['x'] + distance_from_camera * np.cos(rad(focus_orientation)),
                 'y':current_vehicle_location['y'] + distance_from_camera * np.sin(rad(focus_orientation)),
             }
+            qr_list[i] = new_qr
         
         prCyan("-"*40)
         for i,qr in enumerate(qr_list):
@@ -212,8 +213,6 @@ def ComputerVision():
         # Send out the final decision of what the robot sees!
         publish(client,"data_V2B",{"object_list":qr_list})
         wait(config["submission_interval"])
-
-# object_list looks like: {"object_name":[class_name,confidence,distance], ... (n=#real_objects)}
 
 if __name__ == "__main__":
     try:

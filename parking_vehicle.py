@@ -41,10 +41,8 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("verdict")
     client.subscribe("msg_B2V")
     client.subscribe("config")
-    # Tell the server that this client exists!
+    # Tell the server that this client exists! Add it to the registry.
     publish(client,"new_client",{"message":"New Client :)"})
-    # Publish test data to the server.
-    #publish(client,"data_V2B",{"message":"Traffic Cone","confidence":90,"timestamp":time.time()})
 
 def processVerdict(payload):
     prYellow(f"Verdict received. The objects are: " + str(payload["message"]))

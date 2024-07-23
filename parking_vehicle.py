@@ -7,6 +7,7 @@ import socket
 import time
 from time import sleep as wait
 from vilib import Vilib # Built-in SunFounder computer vision library
+from picarx import Picarx
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
 import numpy as np
 import os
@@ -143,7 +144,10 @@ def StartCamera():
     Vilib.qrcode_detect_switch(True) # Enable QR detection
 
 # VILIB CODE...
-def ComputerVision():
+def MainLoop():
+    px = Picarx()
+    px.set_cam_pan_angle(0)
+    px.set_cam_tilt_angle(0)
     waitForConfig()
     global config
     StartCamera()
@@ -160,7 +164,8 @@ def ComputerVision():
     }
     current_vehicle_location = initial_vehicle_location
 
-    initial_vehicle_orientation = vehicle_locations[client_name]["theta"]
+    initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] + vehicle_locations[client_name]["camera_angle"]) % 360
+    px.set_cam_pan_angle(vehicle_locations[client_name]["camera_angle"])
     current_vehicle_orientation = initial_vehicle_orientation
 
     # Calculate some basic constants based on the configuration
@@ -220,7 +225,7 @@ if __name__ == "__main__":
         #while config == None:
             #publish(client,"request_config",{"message":"Please send me the config!"})
             #wait(0.5)
-        ComputerVision()
+        MainLoop()
     except KeyboardInterrupt:
         pass
     #except Exception as e:

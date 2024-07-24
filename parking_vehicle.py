@@ -170,8 +170,8 @@ def MainLoop():
     initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] + vehicle_locations[client_name]["camera_angle"]) % 360
     for i in range(vehicle_locations[client_name]["camera_angle"]):
         px.set_cam_pan_angle(i)
-        if i%5==0:
-            wait(0.1)
+        if i%3==0:
+            wait(0.03)
     current_vehicle_orientation = initial_vehicle_orientation
 
     # Calculate some basic constants based on the configuration

@@ -147,10 +147,11 @@ px = None
 
 def moveCameraToAngle(px,angle):
     mult = 1 if angle>0 else -1
-    for i in range(abs(angle)):
+    for i in range(np.floor(abs(angle))):
         px.set_cam_pan_angle(i*mult)
         if i%3==0:
             wait(0.03)
+    px.set_cam_pan_angle(angle)
 
 # VILIB CODE...
 def MainLoop():

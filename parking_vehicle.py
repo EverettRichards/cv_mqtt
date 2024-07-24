@@ -143,8 +143,11 @@ def StartCamera():
     Vilib.object_detect_switch(False) # DO NOT enable object detection
     Vilib.qrcode_detect_switch(True) # Enable QR detection
 
+px = None
+
 # VILIB CODE...
 def MainLoop():
+    global px
     px = Picarx()
     px.set_cam_pan_angle(0)
     px.set_cam_tilt_angle(0)
@@ -235,3 +238,6 @@ if __name__ == "__main__":
         #print(f"\033[31mERROR: {e}\033[m")
     finally:
         Vilib.camera_close()
+        if px:
+            px.set_cam_pan_angle(0)
+            px.stop()

@@ -175,7 +175,7 @@ def MainLoop():
     }
     current_vehicle_location = initial_vehicle_location
 
-    initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] + vehicle_locations[client_name]["camera_angle"]) % 360
+    initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] - vehicle_locations[client_name]["camera_angle"]) % 360
     moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"])
     current_vehicle_orientation = initial_vehicle_orientation
 

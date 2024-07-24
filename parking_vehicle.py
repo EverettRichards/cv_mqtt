@@ -145,6 +145,13 @@ def StartCamera():
 
 px = None
 
+def moveCameraToAngle(px,angle):
+    mult = 1 if angle>0 else -1
+    for i in range(abs(angle)):
+        px.set_cam_pan_angle(i*mult)
+        if i%3==0:
+            wait(0.03)
+
 # VILIB CODE...
 def MainLoop():
     global px
@@ -168,10 +175,7 @@ def MainLoop():
     current_vehicle_location = initial_vehicle_location
 
     initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] + vehicle_locations[client_name]["camera_angle"]) % 360
-    for i in range(vehicle_locations[client_name]["camera_angle"]):
-        px.set_cam_pan_angle(i)
-        if i%3==0:
-            wait(0.03)
+    moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"])
     current_vehicle_orientation = initial_vehicle_orientation
 
     # Calculate some basic constants based on the configuration

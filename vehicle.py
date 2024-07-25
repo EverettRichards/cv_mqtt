@@ -135,7 +135,7 @@ def ComputerVision():
     for obj in object_locations.keys():
         obj_loc = object_locations[obj]
         theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
-        angles_to_each_object[obj] = (my_loc["car_angle"]-my_loc["camera_angle"]) - theta * 180 / np.pi
+        angles_to_each_object[obj] = ((my_loc["car_angle"]-my_loc["camera_angle"]) - (theta * 180 / np.pi)) % 360
 
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
     #vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]
@@ -168,7 +168,10 @@ def ComputerVision():
             closest_object = find_closest_object(angles_to_each_object,delta_theta)
             closest_angle = angles_to_each_object[closest_object]
             angle_difference = abs(delta_theta - closest_angle)
-            print(f"Object {obj['class_name']} is {angle_difference} degrees off from object {closest_object}")
+            #print(f"Object {obj['class_name']} is {angle_difference} degrees off from object {closest_object}")
+
+            print(f"Delta Theta for object {obj['class_name']}: {delta_theta}")
+            print(f"Closest Object: {closest_object} at {closest_angle}")
 
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:

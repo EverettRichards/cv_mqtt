@@ -77,7 +77,6 @@ def on_message(client, userdata, msg):
     # Turn from string text to data structure
     payload = decodePayload(payload)
     # Handle the message
-    print(msg.topic)
     if msg.topic == "verdict":
         # Receive a verdict from the server. Utilize it.
         processVerdict(payload)

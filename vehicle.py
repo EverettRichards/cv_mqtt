@@ -96,7 +96,15 @@ def network_loop():
     client.loop_forever()
 
 def find_closest_object(dict_of_numbers, number):
-    return min(dict_of_numbers.keys(), key=lambda x:abs((dict_of_numbers[x])-number))
+    closest_object = None
+    closest_distance = None
+    for i,v in dict_of_numbers.items():
+        if v == None: continue
+        if v > 180: v -= 360
+        if closest_object == None or abs(v-number) < closest_distance:
+            closest_object = i
+            closest_distance = abs(v-number)
+    return closest_object
 
 def get_distance(obj,car):
     obj_loc = config["object_locations"][obj]

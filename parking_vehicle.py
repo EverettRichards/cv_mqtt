@@ -3,6 +3,7 @@
 import paho.mqtt.client as mqtt
 import json
 from network_config import broker_IP, port_num
+from robot_hat import TTS
 import socket
 import time
 from time import sleep as wait
@@ -69,6 +70,7 @@ def waitForConfig():
 
 # The callback function, it will be triggered when receiving messages
 def on_message(client, userdata, msg):
+    global px
     # Turn from byte array to string text
     payload = msg.payload.decode("utf-8")
     # Turn from string text to data structure
@@ -79,6 +81,10 @@ def on_message(client, userdata, msg):
         processVerdict(payload)
     elif msg.topic == "config":
         writeConfig(payload)
+    elif msg.topic == "finished":
+        prGreen("The server has finished its task. Have a nice day!")
+        tts.say("Data collection is complete. Please shut down the vehicle or restart the program.")
+        exit(0)
 
 client = mqtt.Client()
 client.on_connect = on_connect
@@ -144,6 +150,7 @@ def StartCamera():
     Vilib.qrcode_detect_switch(True) # Enable QR detection
 
 px = None
+tts = None
 
 def moveCameraToAngle(px,angle):
     mult = 1 if angle>0 else -1
@@ -157,6 +164,7 @@ def moveCameraToAngle(px,angle):
 def MainLoop():
     global px
     px = Picarx()
+    tts = TTS()
     px.set_cam_pan_angle(0)
     px.set_cam_tilt_angle(0)
     waitForConfig()

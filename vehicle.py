@@ -66,7 +66,7 @@ def waitForConfig():
             config = json.loads(conf_file.read())
         except:
             prRed("Config not received yet. Waiting...")
-        wait(0.1)
+        wait(0.5)
 
 # The callback function, it will be triggered when receiving messages
 def on_message(client, userdata, msg):
@@ -160,6 +160,7 @@ def ComputerVision():
             closest_object = find_closest_object(angles_to_each_object,delta_theta)
             closest_angle = angles_to_each_object[closest_object]
             angle_difference = abs(delta_theta - closest_angle)
+            print(f"Object {closest_object} is {angle_difference} degrees off from object {closest_object}")
 
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:

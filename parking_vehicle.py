@@ -43,6 +43,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("verdict")
     client.subscribe("msg_B2V")
     client.subscribe("config")
+    client.subscribe("finished")
     # Tell the server that this client exists! Add it to the registry.
     publish(client,"new_client",{"message":"New Client :)"})
 
@@ -83,6 +84,7 @@ def on_message(client, userdata, msg):
         writeConfig(payload)
     elif msg.topic == "finished":
         prGreen("The server has finished its task. Have a nice day!")
+        tts = TTS()
         tts.say("Data collection is complete. Please shut down the vehicle or restart the program.")
         exit(0)
 
@@ -164,7 +166,6 @@ def moveCameraToAngle(px,angle):
 def MainLoop():
     global px
     px = Picarx()
-    tts = TTS()
     px.set_cam_pan_angle(0)
     px.set_cam_tilt_angle(0)
     waitForConfig()

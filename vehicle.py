@@ -160,7 +160,7 @@ def ComputerVision():
             closest_object = find_closest_object(angles_to_each_object,delta_theta)
             closest_angle = angles_to_each_object[closest_object]
             angle_difference = abs(delta_theta - closest_angle)
-            print(f"Object {closest_object} is {angle_difference} degrees off from object {closest_object}")
+            print(f"Object {obj["class_name"]} is {angle_difference} degrees off from object {closest_object}")
 
             # If the angle is within the threshold, and the object is more confident than the last one (if any), update the object list
             if angle_difference < config["angle_threshold"]:

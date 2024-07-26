@@ -166,8 +166,17 @@ def moveCameraToAngle(px,angle):
             wait(0.03)
     px.set_cam_pan_angle(angle)
 
+horizontal_angle_per_pixel = None
+vertical_angle_per_pixel = None
+qr_code_size_inches = None
+current_vehicle_orientation = None
+
 # This function calculates the distance and position of each QR code in the list, relative to the robot's current position and orientation.
 def getRevisedQrList(qr_list,current_vehicle_location):
+    global horizontal_angle_per_pixel
+    global vertical_angle_per_pixel
+    global qr_code_size_inches
+    global current_vehicle_orientation
     qr_list = sorted(qr_list,key=lambda qr: qr['x'])
     for i,qr in enumerate(qr_list):
         new_qr = {'text':qr['text']}
@@ -227,6 +236,12 @@ def MainLoop():
     global config
     StartCamera()
     wait(1)
+
+    global current_vehicle_orientation
+    global current_vehicle_location
+    global horizontal_angle_per_pixel
+    global vertical_angle_per_pixel
+    global qr_code_size_inches
 
     # Import from the collective config file
     vehicle_locations = config["vehicle_locations"]

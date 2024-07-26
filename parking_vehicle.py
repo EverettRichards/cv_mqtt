@@ -196,6 +196,7 @@ def getRevisedQrList(qr_list,current_vehicle_location):
             'y':current_vehicle_location['y'] + distance_from_camera * np.sin(rad(focus_orientation)),
         }
         qr_list[i] = new_qr
+    return qr_list
 
 # This function prints out the list of QR codes that the robot has seen. It will print out the text of the QR code, its global position, and its distance from the robot.
 def printQrList(qr_list):

@@ -262,8 +262,12 @@ def MainLoop():
         # Before: attributes are [text,x,y,w,h]
         # After: attributes are [text,position{x,y},distance]
 
-        # Update the long-term list of QR codes that the robot has seen
-        updateQrList(qr_list,found_plates)
+        if config["use_updated_client_method"]:
+            # Update the long-term list of QR codes that the robot has seen
+            updateQrList(qr_list,found_plates)
+        else:
+            # Would make the code work effectively the same as before, since the list is replaced with the most recent data
+            found_plates = qr_list
 
         # Send out the final decision of what the robot sees!
         if time.time() - last_published > config["submission_interval"]:

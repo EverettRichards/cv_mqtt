@@ -110,6 +110,9 @@ def get_distance(obj,car):
     car_loc = config["vehicle_locations"][car]
     return np.sqrt((obj_loc["x"]-car_loc["x"])**2 + (obj_loc["y"]-car_loc["y"])**2)
 
+def distance(x1,y1,x2,y2):
+    return np.sqrt((x1-x2)**2 + (y1-y2)**2)
+
 horizontal_angle_per_pixel = None
 screen_center_x = None
 
@@ -154,6 +157,7 @@ def StartCamera():
 px = None
 tts = None
 
+# This function gradually moves the camera pan to a specific angle, using the Picarx library.
 def moveCameraToAngle(px,angle):
     mult = 1 if angle>0 else -1
     for i in range(abs(angle)):
@@ -162,7 +166,58 @@ def moveCameraToAngle(px,angle):
             wait(0.03)
     px.set_cam_pan_angle(angle)
 
-# VILIB CODE...
+# This function calculates the distance and position of each QR code in the list, relative to the robot's current position and orientation.
+def getRevisedQrList(qr_list,current_vehicle_location):
+    qr_list = sorted(qr_list,key=lambda qr: qr['x'])
+    for i,qr in enumerate(qr_list):
+        new_qr = {'text':qr['text']}
+        angle_from_center = get_angle_to_qr(qr)
+        # Figure out how many degrees the QR code spans
+        angular_width = qr['w'] * horizontal_angle_per_pixel
+        angular_height = qr['h'] * vertical_angle_per_pixel
+        angular_avg_size = np.sqrt(angular_width*angular_height)
+        # Calculate the object's distance from camera using basic trig + knowledge of fixed QR code size
+        distance_from_camera = qr_code_size_inches / (2 * np.tan(rad(angular_avg_size)/2))
+        new_qr['distance'] = distance_from_camera
+        # The objective orientation of the detected QR code, relative to central axis
+        focus_orientation = current_vehicle_orientation - angle_from_center
+
+        new_qr['position'] = {
+            'x':current_vehicle_location['x'] + distance_from_camera * np.cos(rad(focus_orientation)),
+            'y':current_vehicle_location['y'] + distance_from_camera * np.sin(rad(focus_orientation)),
+        }
+        qr_list[i] = new_qr
+
+# This function prints out the list of QR codes that the robot has seen. It will print out the text of the QR code, its global position, and its distance from the robot.
+def printQrList(qr_list):
+    prCyan("-"*40)
+    for i,qr in enumerate(qr_list):
+        main_word = None
+        if qr['text'] == "EMPTY":
+            main_word = getRed(qr['text']) + "  "
+        else:
+            main_word = getGreen(qr['text'])
+        output = f"Parking Spot {i} is: {main_word} GLOBAL POSITION: ({qr['position']['x']:.2f},{qr['position']['y']:.2f}). Dist={qr['distance']:.2f}in."
+        print(output)
+    prCyan("-"*40)
+
+# This function updates the list of QR codes that the robot has seen. It will add new QR codes, update existing ones, and remove ones that are no longer visible.
+def updateQrList(qr_list,found_plates):
+    for qr in qr_list:
+            if qr['text'] == "EMPTY": # If the QR code is empty, we need to check if it's close to another empty QR code
+                for qr2 in found_plates:
+                    if qr2['text'] == "EMPTY" and distance(qr['position']['x'],qr['position']['y'],qr2['position']['x'],qr2['position']['y']) < 2:
+                        found_plates.remove(qr2)
+                        break
+                found_plates.append(qr)
+            else: # If the QR code is not empty, we need to check if it's already in the list. If it is, we need to update it. If not, we need to add it.
+                for qr2 in found_plates:
+                    if qr2['text'] == qr['text']:
+                        found_plates.remove(qr2)
+                        break
+                found_plates.append(qr)
+
+# This is the main loop of the program. It will run forever, updating the list of QR codes that the robot sees and sending it to the server.
 def MainLoop():
     global px
     px = Picarx()
@@ -198,44 +253,30 @@ def MainLoop():
 
     qr_code_size_inches = 1 + 15/16
 
-    # Continue forever...
+    last_published = time.time()
+    found_plates = []
+    # Continue forever, updating the QR list every time and sending it to the server occasionally
     while True:
-        # Sort by order left-to-right
-        qr_list = sorted(Vilib.detect_obj_parameter['qr_list'],key=lambda qr: qr['x'])
+        # Get the QR list in a more useful form
+        qr_list = getRevisedQrList(Vilib.detect_obj_parameter['qr_list'].copy(),current_vehicle_location)
+        # Before: attributes are [text,x,y,w,h]
+        # After: attributes are [text,position{x,y},distance]
 
-        for i,qr in enumerate(qr_list):
-            new_qr = {'text':qr['text']}
-            angle_from_center = get_angle_to_qr(qr)
-            # Figure out how many degrees the QR code spans
-            angular_width = qr['w'] * horizontal_angle_per_pixel
-            angular_height = qr['h'] * vertical_angle_per_pixel
-            angular_avg_size = np.sqrt(angular_width*angular_height)
-            # Calculate the object's distance from camera using basic trig + knowledge of fixed QR code size
-            distance_from_camera = qr_code_size_inches / (2 * np.tan(rad(angular_avg_size)/2))
-            new_qr['distance'] = distance_from_camera
-            # The objective orientation of the detected QR code, relative to central axis
-            focus_orientation = current_vehicle_orientation - angle_from_center
-
-            new_qr['position'] = {
-                'x':current_vehicle_location['x'] + distance_from_camera * np.cos(rad(focus_orientation)),
-                'y':current_vehicle_location['y'] + distance_from_camera * np.sin(rad(focus_orientation)),
-            }
-            qr_list[i] = new_qr
-        
-        prCyan("-"*40)
-        for i,qr in enumerate(qr_list):
-            main_word = None
-            if qr['text'] == "EMPTY":
-                main_word = getRed(qr['text']) + "  "
-            else:
-                main_word = getGreen(qr['text'])
-            output = f"Parking Spot {i} is: {main_word} GLOBAL POSITION: ({qr['position']['x']:.2f},{qr['position']['y']:.2f}). Dist={qr['distance']:.2f}in."
-            print(output)
-        prCyan("-"*40)
+        # Update the long-term list of QR codes that the robot has seen
+        updateQrList(qr_list,found_plates)
 
         # Send out the final decision of what the robot sees!
-        publish(client,"data_V2B",{"object_list":qr_list})
-        wait(config["submission_interval"])
+        if time.time() - last_published > config["submission_interval"]:
+            last_published = time.time()
+            # Print out the QR list for debugging and information purposes
+            printQrList(found_plates)
+            # Publish the QR list to the server
+            publish(client,"data_V2B",{"object_list":found_plates})
+            # Reset the list of found plates
+            found_plates.clear()
+        
+        # Wait for a "tick" of time
+        wait(config["capture_interval"])
 
 if __name__ == "__main__":
     try:

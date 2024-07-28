@@ -11,6 +11,7 @@ from vilib import Vilib # Built-in SunFounder computer vision library
 from picarx import Picarx
 from multiprocessing import Process # Concurrency library, since we have 2 infinite loops going on here...
 import numpy as np
+from collections import defaultdict as dd
 import os
 from colors import *
 
@@ -151,7 +152,7 @@ def StartCamera():
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     #wait(1)
-    Vilib.object_detect_switch(False) # DO NOT enable object detection
+    Vilib.object_detect_switch(True) # Enable object detection
     Vilib.qrcode_detect_switch(True) # Enable QR detection
 
 px = None
@@ -227,25 +228,52 @@ def updateQrList(qr_list,found_plates):
                         break
                 found_plates.append(qr)
 
+angles_to_each_object = None
+
+def processDetectedObject(obj):
+    # Get the bounding box parameters from Vilib
+    y1,x1,y2,x2 = obj["bounding_box"]
+    # Scale the boundaries from ratio (0.000 to 1.000) to pixel size (0 to 480/640)
+    y1,y2 = y1*config["image_height"],y2*config["image_height"] # Adjust to pixel size
+    x1,x2 = x1*config["image_width"],x2*config["image_width"] # Adjust to pixel size
+    y1,x1,y2,x2 = int(y1),int(x1),int(y2),int(x2)
+
+    x_center = (x1+x2)/2
+
+    # Find out how many degrees off-center the detected object is
+    delta_x = x_center - screen_center_x
+    delta_theta = delta_x * horizontal_angle_per_pixel
+
+    # Determine which of the known objects this object is closest to, in terms of angle
+    closest_object = find_closest_object(angles_to_each_object,delta_theta)
+    closest_angle = angles_to_each_object[closest_object]
+    angle_difference = abs(delta_theta - closest_angle)
+    return closest_object,angle_difference
+
 # This is the main loop of the program. It will run forever, updating the list of QR codes that the robot sees and sending it to the server.
 def MainLoop():
     global px
-    px = Picarx()
-    px.set_cam_pan_angle(0)
-    px.set_cam_tilt_angle(0)
-    waitForConfig()
     global config
-    StartCamera()
-    wait(1)
-
     global current_vehicle_orientation
     global current_vehicle_location
     global horizontal_angle_per_pixel
     global vertical_angle_per_pixel
     global qr_code_size_inches
+    global horizontal_angle_per_pixel
+    global screen_center_x
+    global angles_to_each_object
+    global dd
+
+    px = Picarx()
+    px.set_cam_pan_angle(0)
+    px.set_cam_tilt_angle(0)
+    waitForConfig()
+    StartCamera()
+    wait(1)
 
     # Import from the collective config file
     vehicle_locations = config["vehicle_locations"]
+    object_locations = config["object_locations"]
     default_location = vehicle_locations[client_name]
 
     # The current car's physical location in 2D space
@@ -254,25 +282,42 @@ def MainLoop():
         'y': default_location["y"],
     }
     current_vehicle_location = initial_vehicle_location
+    my_loc = current_vehicle_location # Temp dual-reference variable
 
     initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] - vehicle_locations[client_name]["camera_angle"]) % 360
     moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"])
     current_vehicle_orientation = initial_vehicle_orientation
 
-    # Calculate some basic constants based on the configuration
-    global horizontal_angle_per_pixel
-    global screen_center_x
+    angles_to_each_object = {} # Strictly in Degrees. The expected angles from the robot to each of the listed object locations.
 
+    # Initialize the angles to each object
+    for obj in object_locations.keys():
+        obj_loc = object_locations[obj]
+        theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
+        angles_to_each_object[obj] = ((my_loc["car_angle"]-my_loc["camera_angle"]) - (theta * 180 / np.pi)) % 360
+
+    # Calculate some basic constants based on the configuration
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
     vertical_angle_per_pixel = config["vertical_FOV"] / config["image_height"]
     screen_center_x = config["image_width"] / 2
 
-    qr_code_size_inches = 1 + 15/16
+    qr_code_size_inches = 1 + 15/16 # Constant width of QR codes
 
     last_published = time.time()
-    found_plates = []
+    found_plates = [] # Where longitudinal license plates will be stored
+    found_objects = {} # Where longitudinal non-license plate objects will be stored
+
+    for name in object_locations.keys():
+        found_objects[name] = dd(float) # Each is a dd with index=label and value=score
+
+    local_iteration_count = 0
+
     # Continue forever, updating the QR list every time and sending it to the server occasionally
     while True:
+        local_iteration_count += 1
+        ############################################################################################################
+        ''' DO LICENSE PLATE STUFF '''
+        ############################################################################################################
         # Get the QR list in a more useful form
         qr_list = getRevisedQrList(Vilib.detect_obj_parameter['qr_list'].copy(),current_vehicle_location)
         # Before: attributes are [text,x,y,w,h]
@@ -284,16 +329,51 @@ def MainLoop():
         else:
             # Would make the code work effectively the same as before, since the list is replaced with the most recent data
             found_plates = qr_list
+        ############################################################################################################
+        ''' DO OBJECT DETECTION STUFF '''
+        ############################################################################################################
+        # Acquire list of detected objects
+        detected_objects = Vilib.object_detection_list_parameter.copy()
 
+        for obj in detected_objects:
+            closest_object,angle_difference = processDetectedObject(obj)
+
+            if angle_difference < config["angle_threshold"]:
+                this_dd = found_objects[closest_object]
+                this_dd[obj['class_name']] += obj["score"]
+
+        ############################################################################################################
+        ''' DO FINAL DECISION STUFF '''
+        ############################################################################################################
         # Send out the final decision of what the robot sees!
         if time.time() - last_published > config["submission_interval"]:
+            '''
+            # DEPRECATED: Narrowing it down on the client side is not necessary, as the server can do it more effectively.
+            object_list = {}
+            for object_id,this_dd in found_objects.items():
+                highest_scorer = max(this_dd.keys(), key=lambda x: this_dd[x])
+                high_score = this_dd[highest_scorer]
+                adjusted_score = high_score / local_iteration_count # Normalize the score to be per iteration, so like an avg. confidence
+                object_list[object_id] = [highest_scorer,adjusted_score]
+                this_dd.clear()
+            '''
+            for object_id,this_dd in found_objects.items():
+                for key in this_dd.keys():
+                    this_dd[key] /= local_iteration_count
+            # Note the UTC time of data publication
             last_published = time.time()
             # Print out the QR list for debugging and information purposes
             printQrList(found_plates)
-            # Publish the QR list to the server
-            publish(client,"data_V2B",{"object_list":found_plates})
-            # Reset the list of found plates
+            # Publish the QR and object lists to the server
+            publish(client,"data_V2B",{
+                "parking_list":found_plates,
+                "object_list":found_objects,
+            })
+            # Reset the lists of detected license plates and objects
             found_plates.clear()
+            for object_id,this_dd in found_objects.items():
+                this_dd.clear()
+            local_iteration_count = 0
         
         # Wait for a "tick" of time
         wait(config["capture_interval"])

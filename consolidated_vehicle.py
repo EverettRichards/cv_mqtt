@@ -286,7 +286,7 @@ def MainLoop():
     initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] - vehicle_locations[client_name]["camera_angle"]) % 360
     moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"])
     current_vehicle_orientation = initial_vehicle_orientation
-    my_loc = current_vehicle_location # Temp dual-reference variable
+    my_loc = vehicle_locations[client_name] # Temp dual-reference variable
 
     angles_to_each_object = {} # Strictly in Degrees. The expected angles from the robot to each of the listed object locations.
 

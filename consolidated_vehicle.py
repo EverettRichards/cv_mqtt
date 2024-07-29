@@ -172,6 +172,7 @@ vertical_angle_per_pixel = None
 qr_code_size_inches = None
 current_vehicle_orientation = None
 offset_angle = 0
+offset_angle_direction = 1
 
 # This function calculates the distance and position of each QR code in the list, relative to the robot's current position and orientation.
 def getRevisedQrList(qr_list,current_vehicle_location):
@@ -381,9 +382,9 @@ def MainLoop():
         ''' CHANGE THE ANGLE OF THE CAMERA '''
         ############################################################################################################
         if config["do_rapidly_turn"]:
-            offset_angle += 3
-            if offset_angle > 9:
-                offset_angle = -9
+            offset_angle += 3 * offset_angle_direction
+            if abs(offset_angle) >= 6:
+                offset_angle_direction *= -1
             px.set_cam_pan_angle(vehicle_locations[client_name]["camera_angle"] + offset_angle)
             current_vehicle_orientation = initial_vehicle_orientation - offset_angle
 

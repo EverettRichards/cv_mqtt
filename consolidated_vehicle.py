@@ -265,6 +265,7 @@ def MainLoop():
     global screen_center_x
     global angles_to_each_object
     global offset_angle
+    global offset_angle_direction
     global dd
 
     px = Picarx()

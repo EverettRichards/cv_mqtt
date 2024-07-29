@@ -382,9 +382,8 @@ def MainLoop():
             offset_angle += 3
             if offset_angle > 9:
                 offset_angle = -9
-            moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"] + offset_angle)
+            px.set_cam_pan_angle(vehicle_locations[client_name]["camera_angle"] + offset_angle)
             current_vehicle_orientation = initial_vehicle_orientation - offset_angle
-            px.set_cam_pan_angle(config["camera_angle"] + offset_angle)
 
         # Wait for a "tick" of time before continuing to the next cycle
         wait(config["capture_interval"])

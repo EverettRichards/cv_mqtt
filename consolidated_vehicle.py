@@ -171,6 +171,7 @@ horizontal_angle_per_pixel = None
 vertical_angle_per_pixel = None
 qr_code_size_inches = None
 current_vehicle_orientation = None
+offset_angle = 0
 
 # This function calculates the distance and position of each QR code in the list, relative to the robot's current position and orientation.
 def getRevisedQrList(qr_list,current_vehicle_location):
@@ -262,6 +263,7 @@ def MainLoop():
     global horizontal_angle_per_pixel
     global screen_center_x
     global angles_to_each_object
+    global offset_angle
     global dd
 
     px = Picarx()
@@ -286,15 +288,14 @@ def MainLoop():
     initial_vehicle_orientation = (vehicle_locations[client_name]["car_angle"] - vehicle_locations[client_name]["camera_angle"]) % 360
     moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"])
     current_vehicle_orientation = initial_vehicle_orientation
-    my_loc = vehicle_locations[client_name] # Temp dual-reference variable
 
     angles_to_each_object = {} # Strictly in Degrees. The expected angles from the robot to each of the listed object locations.
 
     # Initialize the angles to each object
     for obj in object_locations.keys():
         obj_loc = object_locations[obj]
-        theta = np.arctan2(obj_loc["y"]-my_loc["y"],obj_loc["x"]-my_loc["x"]).item()
-        angles_to_each_object[obj] = ((my_loc["car_angle"]-my_loc["camera_angle"]) - (theta * 180 / np.pi)) % 360
+        theta = np.arctan2(obj_loc["y"]-current_vehicle_location["y"],obj_loc["x"]-current_vehicle_location["x"]).item()
+        angles_to_each_object[obj] = (current_vehicle_orientation - (theta * 180 / np.pi)) % 360
 
     # Calculate some basic constants based on the configuration
     horizontal_angle_per_pixel = config["horizontal_FOV"] / config["image_width"]
@@ -374,8 +375,18 @@ def MainLoop():
             for object_id,this_dd in found_objects.items():
                 this_dd.clear()
             local_iteration_count = 0
-        
-        # Wait for a "tick" of time
+        ############################################################################################################
+        ''' CHANGE THE ANGLE OF THE CAMERA '''
+        ############################################################################################################
+        if config["do_rapidly_turn"]:
+            offset_angle += 3
+            if offset_angle > 9:
+                offset_angle = -9
+            moveCameraToAngle(px,vehicle_locations[client_name]["camera_angle"] + offset_angle)
+            current_vehicle_orientation = initial_vehicle_orientation - offset_angle
+            px.set_cam_pan_angle(config["camera_angle"] + offset_angle)
+
+        # Wait for a "tick" of time before continuing to the next cycle
         wait(config["capture_interval"])
 
 if __name__ == "__main__":

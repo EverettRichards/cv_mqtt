@@ -152,8 +152,8 @@ def StartCamera():
     Vilib.show_fps()
     Vilib.display(local=True, web=True)
     #wait(1)
-    Vilib.object_detect_switch(True) # Enable object detection
-    Vilib.qrcode_detect_switch(True) # Enable QR detection
+    Vilib.object_detect_switch(config["detect_objects"]) # Enable object detection
+    Vilib.qrcode_detect_switch(config["detect_plates"]) # Enable QR detection
 
 px = None
 tts = None
@@ -333,15 +333,16 @@ def MainLoop():
         ############################################################################################################
         ''' DO OBJECT DETECTION STUFF '''
         ############################################################################################################
-        # Acquire list of detected objects
-        detected_objects = Vilib.object_detection_list_parameter.copy()
+        if config["detect_objects"]:
+            # Acquire list of detected objects
+            detected_objects = Vilib.object_detection_list_parameter.copy()
 
-        for obj in detected_objects:
-            closest_object,angle_difference = processDetectedObject(obj)
+            for obj in detected_objects:
+                closest_object,angle_difference = processDetectedObject(obj)
 
-            if angle_difference < config["angle_threshold"]:
-                this_dd = found_objects[closest_object]
-                this_dd[obj['class_name']] += obj["score"]
+                if angle_difference < config["angle_threshold"]:
+                    this_dd = found_objects[closest_object]
+                    this_dd[obj['class_name']] += obj["score"]
 
         ############################################################################################################
         ''' DO FINAL DECISION STUFF '''
@@ -358,9 +359,10 @@ def MainLoop():
                 object_list[object_id] = [highest_scorer,adjusted_score]
                 this_dd.clear()
             '''
-            for object_id,this_dd in found_objects.items():
-                for key in this_dd.keys():
-                    this_dd[key] /= local_iteration_count
+            if config["detect_objects"]:
+                for this_dd in found_objects.values():
+                    for key in this_dd.keys():
+                        this_dd[key] /= local_iteration_count
             # Note the UTC time of data publication
             last_published = time.time()
             # Print out the QR list for debugging and information purposes

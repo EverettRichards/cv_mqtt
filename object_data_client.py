@@ -36,7 +36,7 @@ def decodePayload(string_data):
 
 def publish(client,topic,message):
     client.publish(topic,payload=encodePayload(message),qos=0,retain=False)
-    prCyan(f"Emitted message (t = ...{time.time()%10000:.3f}s)")
+    print(f"{getYellow('Emitted message')} (t=...{getCyan(round(time.time()%10000,3))}s",end="\r")
 
 def on_connect(client, userdata, flags, rc):
     prCyan(f"Connected with result code {rc}")

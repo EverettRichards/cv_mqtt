@@ -252,6 +252,16 @@ def processDetectedObject(obj):
     angle_difference = abs(delta_theta - closest_angle)
     return closest_object,angle_difference
 
+def convert_to_serializable(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {k: convert_to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_serializable(i) for i in obj]
+    else:
+        return obj
+
 # This is the main loop of the program. It will run forever, updating the list of QR codes that the robot sees and sending it to the server.
 def MainLoop():
     global px
@@ -363,10 +373,8 @@ def MainLoop():
             local_iteration_count = 0'''
         # Wait for a "tick" of time before continuing to the next cycle
         #wait(config["capture_interval"])
-        for i,v in enumerate(detected_objects):
-            detected_objects[i] = v.tolist()
         publish(client,"data_V2B",{
-                "object_list":detected_objects,
+                "object_list":convert_to_serializable(detected_objects),
             })
         wait(config["submission_interval"])
 

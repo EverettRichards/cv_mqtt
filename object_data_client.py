@@ -363,8 +363,10 @@ def MainLoop():
             local_iteration_count = 0'''
         # Wait for a "tick" of time before continuing to the next cycle
         #wait(config["capture_interval"])
+        for i,v in enumerate(detected_objects):
+            detected_objects[i] = v.tolist()
         publish(client,"data_V2B",{
-                "object_list":detected_objects.tolist(),
+                "object_list":detected_objects,
             })
         wait(config["submission_interval"])
 

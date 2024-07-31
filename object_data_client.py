@@ -323,6 +323,8 @@ def MainLoop():
 
     local_iteration_count = 0
 
+    detected_objects = None
+
     # Continue forever, updating the QR list every time and sending it to the server occasionally
     while True:
         local_iteration_count += 1
@@ -345,11 +347,11 @@ def MainLoop():
         ''' DO FINAL DECISION STUFF '''
         ############################################################################################################
         # Send out the final decision of what the robot sees!
-        if time.time() - last_published > config["submission_interval"]:
+        '''if time.time() - last_published > config["submission_interval"]:
             if config["detect_objects"]:
                 for this_dd in found_objects.values():
                     for key in this_dd.keys():
-                        this_dd[key] /= local_iteration_count
+                        this_dd[key] /= local_iteration_count # Normalize
             # Note the UTC time of data publication
             last_published = time.time()
             # Publish the QR and object lists to the server
@@ -358,9 +360,13 @@ def MainLoop():
             })
             for object_id,this_dd in found_objects.items():
                 this_dd.clear()
-            local_iteration_count = 0
+            local_iteration_count = 0'''
         # Wait for a "tick" of time before continuing to the next cycle
-        wait(config["capture_interval"])
+        #wait(config["capture_interval"])
+        publish(client,"data_V2B",{
+                "object_list":detected_objects,
+            })
+        wait(config["submission_interval"])
 
 if __name__ == "__main__":
     try:

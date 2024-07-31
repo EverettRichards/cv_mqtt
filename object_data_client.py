@@ -334,6 +334,8 @@ def MainLoop():
             detected_objects = Vilib.object_detection_list_parameter.copy()
 
             for obj in detected_objects:
+                if not "class_name" in obj.keys() or not "score" in obj.keys():
+                    continue
                 closest_object,angle_difference = processDetectedObject(obj)
 
                 if angle_difference < config["angle_threshold"]:

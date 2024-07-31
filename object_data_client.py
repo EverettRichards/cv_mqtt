@@ -255,6 +255,8 @@ def processDetectedObject(obj):
 def convert_to_serializable(obj):
     if isinstance(obj, np.ndarray):
         return obj.tolist()
+    elif isinstance(obj, np.float32):
+        return float(obj)
     elif isinstance(obj, dict):
         return {k: convert_to_serializable(v) for k, v in obj.items()}
     elif isinstance(obj, list):
